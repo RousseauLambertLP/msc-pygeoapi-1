@@ -61,6 +61,10 @@ PLUGINS = {
         'cap_alerts_realtime': {
             'filename_pattern': 'alerts/cap',
             'handler': 'msc_pygeoapi.loader.cap_alerts_realtime.CapAlertsRealtimeLoader'  # noqa
+        },
+        'rvas_realtime': {
+            'filename_pattern': 'MSC-INTERNET/RVAS',
+            'handler': 'msc_pygeoapi.loader.rvas.RVASRealtimeLoader'
         }
     }
 }

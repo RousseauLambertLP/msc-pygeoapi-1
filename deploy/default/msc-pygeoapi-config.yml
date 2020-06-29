@@ -435,6 +435,37 @@ resources:
                 - MONTH
                 - VALUE
 
+    rvas:
+        type: collection
+        title: RVAS
+        description: RVAS stations
+        keywords: [RVAS, stations]
+        crs:
+            - CRS84
+        links:
+            - type: text/html
+              rel: canonical
+              title: Climate Data Online
+              href: https://climate.weather.ec.gc.ca
+              hreflang: en-CA
+        extents:
+            spatial:
+                bbox: [-142, 52, -52, 84]
+                crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+            temporal:
+                begin: 1969-01-01T00:00:00Z
+                end: null # or empty
+        provider:
+            name: Elasticsearch
+            data: http://localhost:9200/rvas
+            id_field: identifier
+            properties:
+                - identifier
+                - station
+                - image
+                - direction
+                - timestamp
+
     climate-stations:
         type: collection
         title: Climate Stations
