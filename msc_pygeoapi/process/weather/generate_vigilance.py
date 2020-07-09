@@ -562,8 +562,9 @@ try:
                 generate_vigilance(layers.split(','),
                                    fh, mr, bbox.split(','), format_)
                 out_file = open('vigilance.png', 'rb').read()
-                encoded = base64.b64encode(out_file)
-                return encoded
+                #encoded = base64.b64encode(out_file)
+                #return encoded
+                return out_file
             except ValueError as err:
                 msg = 'Process execution error: {}'.format(err)
                 LOGGER.error(msg)
