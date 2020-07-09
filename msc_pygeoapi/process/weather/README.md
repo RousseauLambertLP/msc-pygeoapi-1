@@ -4,7 +4,7 @@
 curl -o test.png -X POST "http://geomet-dev-03.cmc.ec.gc.ca:5000/processes/generate-vigilance/jobs?raw=True" -H  "accept: application/json" -H  "Content-Type: application/json" -d "{\"inputs\":[{\"id\":\"layers\",\"value\":\"GEPS.DIAG.24_T8.ERGE15,GEPS.DIAG.24_T8.ERGE20,GEPS.DIAG.24_T8.ERGE25\"},{\"id\":\"forecast-hour\",\"value\":\"2020-07-05T00:00:00Z\"},{\"id\":\"model-run\",\"value\":\"2020-07-03T00:00:00Z\"},{\"id\":\"bbox\",\"value\":\"-158.203125, 83.215693, -44.296875, 36.879621\"},{\"id\":\"format\",\"value\":\"png\"}]}"
 ```
 
-## Modification needed in msc-pygeoapi
+## Modification needed in pygeoapi
 
 ```bash
 diff --git a/pygeoapi/api.py b/pygeoapi/api.py
