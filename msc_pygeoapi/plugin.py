@@ -61,6 +61,10 @@ PLUGINS = {
         'cap_alerts_realtime': {
             'filename_pattern': 'alerts/cap',
             'handler': 'msc_pygeoapi.loader.cap_alerts_realtime.CapAlertsRealtimeLoader'  # noqa
+        },
+        'raqdps-fw-ce-hotspots': {
+            'filename_pattern': 'model_raqdps-fw/cumulative_effects/json',
+            'handler': 'msc_pygeoapi.loader.raqdps-fw-ce-hotspots.RAQDPSFWCEHotspotsRealtimeLoader'  # noqa
         }
     }
 }
