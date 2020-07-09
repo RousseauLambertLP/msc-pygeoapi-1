@@ -516,7 +516,8 @@ def raster_drill_cli(ctx, layer, x, y, format_='GeoJSON'):
     if format_ == 'GeoJSON':
         click.echo(json.dumps(output, ensure_ascii=False))
     elif format_ == 'CSV':
-        click.echo(output.getvalue())
+        click.echo(output)
+        #click.echo(output.getvalue())
 
 
 raster_drill_execute.add_command(raster_drill_cli)

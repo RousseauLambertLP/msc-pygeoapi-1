@@ -2,7 +2,9 @@ click
 elasticsearch
 gdal
 lxml
+matplotlib
 parse
+Pillow
 pyproj
 pyyaml
 requests

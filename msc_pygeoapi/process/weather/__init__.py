@@ -1,9 +1,8 @@
 # =================================================================
 #
-# Author: Louis-Philippe Rousseau-Lambert
-#         <Louis-Philippe.RousseauLambert2@canada.ca>
+# Author: Julien Roy-Sabourin <julien.roy-sabourin.eccc@gccollaboration.ca>
 #
-# Copyright (c) 2019 Louis-Philippe Rousseau-Lambert
+# Copyright (c) 2020 Julien Roy-Sabourin
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -30,13 +29,22 @@
 
 import click
 
-from msc_pygeoapi.process.cccs import cccs
-from msc_pygeoapi.process.weather import weather
+#from msc_pygeoapi.process.weather.rdpa_graph import cli as rg
+from msc_pygeoapi.process.weather.generate_vigilance import cli as gv
+
 
 @click.group()
-def process():
+def execute():
     pass
 
 
-process.add_command(cccs)
-process.add_command(weather)
+#execute.add_command(rg)
+execute.add_command(gv)
+
+
+@click.group()
+def weather():
+    pass
+
+
+weather.add_command(execute)
