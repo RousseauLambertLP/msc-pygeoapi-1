@@ -29,6 +29,28 @@ At the moment, the request needs to be done with `?raw=True` because we are retu
 
 ## MSC-pygeoapi code example
 
+### In the PROCESS_METADATA
+
+You need to update the mimetype
+
+```python
+...
+    }],
+    'outputs': [{
+        'id': 'generate-vigilance-response',
+        'title': 'output wms vigilance product',
+        'output': {
+            'formats': [{
+                'mimeType': 'image/png'
+            }]
+        }
+    }],
+
+...
+```
+
+### In the base processor
+
 ```python
                 generate_vigilance(layers.split(','),
                                    fh, mr, bbox.split(','), format_)
