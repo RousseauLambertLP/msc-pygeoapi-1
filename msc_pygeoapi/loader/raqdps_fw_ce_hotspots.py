@@ -46,6 +46,8 @@ LOGGER = logging.getLogger(__name__)
 # Index settings
 INDEX_NAME = 'raqdps-fw_ce-hotspots'
 
+DAYS_TO_KEEP = 365
+
 SETTINGS = {
     'settings': {
         'number_of_shards': 1,
@@ -142,7 +144,7 @@ class RAQDPSFWCEHotspotsRealtimeLoader(BaseLoader):
 
             features = features['features']
 
-            for i in range(0, len(features):
+            for i in range(0, len(features)):
                 date_ = features[i]['rep_date']
                 date_ = strftime_rfc3339(date_.strptime('%Y/%m/%d %H:%M:%S'))
                 features[i]['rep_date'] = date_

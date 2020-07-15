@@ -44,7 +44,7 @@ try:
     from msc_pygeoapi.loader.forecast_polygons import forecast_polygons
     from msc_pygeoapi.loader.marine_weather_realtime import marine_weather
     from msc_pygeoapi.loader.cap_alerts_realtime import cap_alerts
-    from msc_pygeoapi.loader.raqdps-fw-ce-hotspots import ce_hotspots
+    from msc_pygeoapi.loader.raqdps_fw_ce_hotspots import ce_hotspots
 except ImportError as err:
     LOGGER.info('loaders not imported')
     LOGGER.debug(err)
