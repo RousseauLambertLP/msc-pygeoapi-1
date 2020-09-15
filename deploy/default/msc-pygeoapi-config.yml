@@ -906,7 +906,9 @@ resources:
               hreflang: en-CA
         providers:
             - type: coverage
-              name: rasterio
+              name: xarray
+              x_field: lat
+              y_field: lon
               data: /data/geomet/dev/feeds/amqp/climate/cmip5/netcdf/scenarios/RCP8.5/annual/avg_20years/CMIP5_rcp8.5_annual_2081-2100_latlon1x1_TEMP_pctl50_P1Y.nc
 #              options:
 #                  DATA_ENCODING: COMPLEX_PACKING
