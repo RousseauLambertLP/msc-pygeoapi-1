@@ -2532,6 +2532,82 @@ paths:
       summary: Get Climate Stations queryables
       tags:
       - climate-stations
+  /collections/cmip5-RCP8.5-annual-2081-2100-temperature:
+    get:
+      description: CMIP5 RCP8.5 annual 20 years average (2081-2100) temperature anomaly
+        sample
+      operationId: describeCmip5-rcp8.5-annual-2081-2100-temperatureCollection
+      parameters:
+      - $ref: '#/components/parameters/f'
+      responses:
+        '200':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/Collection
+        '400':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/InvalidParameter
+        '404':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/NotFound
+        '500':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/ServerError
+      summary: Get collection metadata
+      tags:
+      - cmip5-RCP8.5-annual-2081-2100-temperature
+  /collections/cmip5-RCP8.5-annual-2081-2100-temperature/coverage:
+    get:
+      description: CMIP5 RCP8.5 annual 20 years average (2081-2100) temperature anomaly
+        sample
+      operationId: getCmip5-rcp8.5-annual-2081-2100-temperatureCoverage
+      parameters:
+      - *id001
+      responses:
+        '200':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/Features
+        '400':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/InvalidParameter
+        '404':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/NotFound
+        '500':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/ServerError
+      summary: Get CMIP5 sample coverage
+      tags:
+      - cmip5-RCP8.5-annual-2081-2100-temperature
+  /collections/cmip5-RCP8.5-annual-2081-2100-temperature/coverage/domainset:
+    get:
+      description: CMIP5 RCP8.5 annual 20 years average (2081-2100) temperature anomaly
+        sample
+      operationId: getCmip5-rcp8.5-annual-2081-2100-temperatureCoverageDomainSet
+      parameters:
+      - *id001
+      responses:
+        '200':
+          $ref: https://raw.githubusercontent.com/tomkralidis/ogcapi-coverages-1/fix-cis/yaml-unresolved/schemas/cis_1.1/domainSet.yaml
+        '400':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/InvalidParameter
+        '404':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/NotFound
+        '500':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/ServerError
+      summary: Get CMIP5 sample coverage domain set
+      tags:
+      - cmip5-RCP8.5-annual-2081-2100-temperature
+  /collections/cmip5-RCP8.5-annual-2081-2100-temperature/coverage/rangetype:
+    get:
+      description: CMIP5 RCP8.5 annual 20 years average (2081-2100) temperature anomaly
+        sample
+      operationId: getCmip5-rcp8.5-annual-2081-2100-temperatureCoverageRangeType
+      parameters:
+      - *id001
+      responses:
+        '200':
+          $ref: https://raw.githubusercontent.com/tomkralidis/ogcapi-coverages-1/fix-cis/yaml-unresolved/schemas/cis_1.1/rangeType.yaml
+        '400':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/InvalidParameter
+        '404':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/NotFound
+        '500':
+          $ref: http://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/ServerError
+      summary: Get CMIP5 sample coverage range type
+      tags:
+      - cmip5-RCP8.5-annual-2081-2100-temperature
   /collections/gdps-temperature:
     get:
       description: Global Deterministic Prediction System sample
@@ -8936,6 +9012,9 @@ tags:
   name: swob-realtime
 - description: Global Deterministic Prediction System sample
   name: gdps-temperature
+- description: CMIP5 RCP8.5 annual 20 years average (2081-2100) temperature anomaly
+    sample
+  name: cmip5-RCP8.5-annual-2081-2100-temperature
 - description: Raster Drill process
   name: raster-drill
 
