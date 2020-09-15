@@ -8863,7 +8863,7 @@ servers:
     interactive web maps, and display and animate MSC data in desktop software. MSC
     GeoMet also enables on demand raw data clipping and reprojection, on demand format
     conversion and custom visualization.
-  url: http://geomet-dev-03.cmc.ec.gc.ca:5022/
+  url: http://geomet-dev-03.cmc.ec.gc.ca:5019/
 tags:
 - description: GeoMet-OGC-API provides public access to the Meteorological Service
     of Canada (MSC) and Environment and Climate Change Canada (ECCC) data via interoperable

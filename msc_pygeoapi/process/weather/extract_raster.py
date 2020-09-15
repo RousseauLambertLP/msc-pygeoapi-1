@@ -41,7 +41,7 @@ import fiona
 from fiona import transform
 import numpy as np
 from osgeo import gdal, osr
-from pyproj import Proj, transform
+import pyproj
 import rasterio
 import rasterio.mask
 from rasterio.io import MemoryFile
@@ -211,10 +211,15 @@ def reproject(x, y, inputSRS_wkt, raster_path):
     #reproject the point
     srs = osr.SpatialReference()
     srs.ImportFromWkt(inputSRS_wkt)
-    inProj = Proj(init='epsg:4326')
-    outProj = Proj(srs.ExportToProj4())
-    _x, _y = transform(inProj, outProj, x, y)
-    
+    inProj = pyproj.Proj(init='epsg:4326')
+    print(inProj)
+    outProj = pyproj.Proj(srs.ExportToProj4())
+    print(outProj)
+    _x, _y = pyproj.transform(inProj, outProj, x, y)
+    print(x, y)
+    print(_x)
+    print(_y)
+
     ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
     geotransform = ds.GetGeoTransform()
     origin_x = geotransform[0]
@@ -496,23 +501,6 @@ def write_output(features, forecast_hours, poly, line, point):
     
     return OUTDATA
 
-@click.command('extract-raster')
-@click.pass_context
-@click.option('--model', 'model', help='which type of raster')
-@click.option('--forecast_hours_', 'forecast_hours_',
-              help='Forecast hours to extract from')
-@click.option('--model_run', 'model_run',
-              help='model run to use for the time series')
-@click.option('--input_geojson', 'input_geojson', help='shape to clip by')
-def cli(ctx, model, forecast_hours_, model_run, input_geojson):
-
-    output_geojson = extract_raster_main(model, forecast_hours_, model_run, input_geojson)
-
-    return output_geojson
-
-    if output is not None:
-        click.echo(json.dumps(output_geojson))
-
 def extract_raster_main(model, forecast_hours_, model_run, input_geojson):
     var_list = ['TT', 'WD', 'WSPD']
     layers = []
@@ -553,6 +541,32 @@ def extract_raster_main(model, forecast_hours_, model_run, input_geojson):
     output_geojson = write_output(features, forecast_hours, poly, line, point)
     
     return output_geojson
+
+
+@click.group('execute')
+def extract_raster_execute():
+    pass
+
+
+@click.command('extract-raster')
+@click.pass_context
+@click.option('--model', 'model', help='which type of raster')
+@click.option('--forecast-hours', 'forecast_hours_',
+              help='Forecast hours to extract from')
+@click.option('--model-run', 'model_run',
+              help='model run to use for the time series')
+@click.option('--input-geojson', 'input_geojson', help='shape to clip by')
+def extract_raster_cli(ctx, model, forecast_hours_, model_run, input_geojson):
+
+    output_geojson = extract_raster_main(model, forecast_hours_, model_run, json.loads(input_geojson))
+
+    return output_geojson
+
+    if output is not None:
+        click.echo(json.dumps(output_geojson))
+
+
+extract_raster_execute.add_command(extract_raster_cli)
     
 try:
     from pygeoapi.process.base import BaseProcessor, ProcessorExecuteError

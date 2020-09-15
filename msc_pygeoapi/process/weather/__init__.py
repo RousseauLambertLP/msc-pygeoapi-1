@@ -29,15 +29,8 @@
 
 import click
 
-from msc_pygeoapi.process.weather.extract_raster import cli as er
+from msc_pygeoapi.process.weather.extract_raster import extract_raster_execute 
 
-
-@click.group()
-def execute():
-    pass
-
-
-execute.add_command(er)
 
 
 @click.group()
@@ -45,4 +38,4 @@ def weather():
     pass
 
 
-weather.add_command(execute)
+weather.add_command(extract_raster_execute)
