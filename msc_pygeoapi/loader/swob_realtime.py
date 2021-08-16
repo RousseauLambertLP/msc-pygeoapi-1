@@ -64,7 +64,7 @@ STATIONS_LIST_URL = 'https://dd.weather.gc.ca/observations/doc/{}'.format(
 STATIONS_CACHE = os.path.join(MSC_PYGEOAPI_CACHEDIR, STATIONS_LIST_NAME)
 
 # cleanup settings
-DAYS_TO_KEEP = 30
+DAYS_TO_KEEP = 31
 
 # index settings
 INDEX_BASENAME = 'lp-swob_realtime.'
