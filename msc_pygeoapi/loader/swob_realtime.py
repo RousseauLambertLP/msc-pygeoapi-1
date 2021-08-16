@@ -67,7 +67,7 @@ STATIONS_CACHE = os.path.join(MSC_PYGEOAPI_CACHEDIR, STATIONS_LIST_NAME)
 DAYS_TO_KEEP = 30
 
 # index settings
-INDEX_BASENAME = 'swob_realtime.'
+INDEX_BASENAME = 'lp-swob_realtime.'
 
 SETTINGS = {
     'order': 0,
