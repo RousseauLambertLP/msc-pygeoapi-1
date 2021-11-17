@@ -39,6 +39,7 @@ import re
 from osgeo import gdal, osr
 import pyproj
 from pyproj import Proj, transform
+import xarray as xr
 import yaml
 from yaml import CLoader
 
@@ -179,32 +180,6 @@ def get_time_info(cfg):
     return dates
 
 
-def geo2xy(ds, x, y):
-    """
-    transforms geographic coordinate to x/y pixel values
-
-    :param ds: GDAL dataset object
-    :param x: x coordinate
-    :param y: y coordinate
-
-    :returns: list of x/y pixel values
-    """
-
-    LOGGER.debug('Running affine transformation')
-    geotransform = ds.GetGeoTransform()
-
-    origin_x = geotransform[0]
-    origin_y = geotransform[3]
-
-    width = geotransform[1]
-    height = geotransform[5]
-
-    x = int((x - origin_x) / width)
-    y = int((y - origin_y) / height)
-
-    return (x, y)
-
-
 def get_location_info(file_, x, y, cfg, layer_keys):
     """
     extract x/y value across all bands of a raster file
@@ -234,9 +209,9 @@ def get_location_info(file_, x, y, cfg, layer_keys):
         dict_['metadata'] = layer_keys
         dict_['uom'] = UNITS[layer_keys['Variable']][layer_keys['Type']]
 
-        ds = gdal.Open(file_)
-        LOGGER.debug('Transforming map coordinates into image coordinates')
-        x_, y_ = geo2xy(ds, x, y)
+        #ds = gdal.Open(file_)
+        #LOGGER.debug('Transforming map coordinates into image coordinates')
+        #x_, y_ = geo2xy(ds, x, y)
 
     except RuntimeError as err:
         ds = None
@@ -245,17 +220,26 @@ def get_location_info(file_, x, y, cfg, layer_keys):
 
     LOGGER.debug('Running through bands')
 
-    for band in range(1, ds.RasterCount + 1):
-        LOGGER.debug('Fetching band {}'.format(band))
+    try:
+        ds = xr.open_dataset(file_)
 
-        srcband = ds.GetRasterBand(band)
-        array = srcband.ReadAsArray().tolist()
+        if 'PCP' in file_:
+            values = ds.pr.sel(lat=y, lon=x, method="nearest").values
+        elif ['TEMP'] in file_:
+            values = ds.tas_ann.sel(lat=y, lon=x, method="nearest").values
+        elif 'SFCWND' in file_:
+            values = ds.sfcWind.sel(lat=y, lon=x, method="nearest").values
+        elif 'SICECONC' in file_:
+            values = ds.sic.sel(lat=y, lon=x, method="nearest").values
+        elif 'SICETHKN' in file_:
+            values = ds.sit.sel(lat=y, lon=x, method="nearest").values
+        elif 'SNDPT' in file_:
+            values = ds.snd.sel(lat=y, lon=x, method="nearest").values
 
-        try:
-            dict_['values'].append(array[y_][x_])
-        except IndexError as err:
-            msg = 'Invalid x/y value: {}'.format(err)
-            LOGGER.exception(msg)
+        dict_['values'] = values.astype(float)
+    except IndexError as err:
+        msg = 'Invalid x/y value: {}'.format(err)
+        LOGGER.exception(msg)
 
     dict_['dates'] = get_time_info(cfg)
 
@@ -366,6 +350,7 @@ def serialize(values_dict, cfg, output_format, x, y):
             values = []
             for k in values_dict['values']:
                 values.append(k)
+
 
             data = {
                 'type': 'Feature',

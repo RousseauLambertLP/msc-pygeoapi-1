@@ -1,4 +1,5 @@
 click<8
+#dask['complete']
 elasticsearch
 gdal
 lxml
@@ -9,4 +10,5 @@ pyyaml
 rasterio
 requests
 sqlalchemy
+xarray
 unicodecsv
