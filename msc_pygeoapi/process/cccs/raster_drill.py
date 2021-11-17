@@ -225,8 +225,8 @@ def get_location_info(file_, x, y, cfg, layer_keys):
 
         if 'PCP' in file_:
             values = ds.pr.sel(lat=y, lon=x, method="nearest").values
-        elif ['TEMP'] in file_:
-            values = ds.tas_ann.sel(lat=y, lon=x, method="nearest").values
+        elif 'TEMP' in file_:
+            values = ds.tas.sel(lat=y, lon=x, method="nearest").values
         elif 'SFCWND' in file_:
             values = ds.sfcWind.sel(lat=y, lon=x, method="nearest").values
         elif 'SICECONC' in file_:
@@ -347,11 +347,6 @@ def serialize(values_dict, cfg, output_format, x, y):
 
         elif output_format == 'GeoJSON':
 
-            values = []
-            for k in values_dict['values']:
-                values.append(k)
-
-
             data = {
                 'type': 'Feature',
                 'geometry': {
@@ -375,7 +370,7 @@ def serialize(values_dict, cfg, output_format, x, y):
                     'percertile_fr': pctl_fr,
                     'label_en': label_en,
                     'label_fr': label_fr,
-                    'values': values
+                    'values': values_dict['values'].tolist()
                 }
             }
 
