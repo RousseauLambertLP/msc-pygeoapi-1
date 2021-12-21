@@ -290,9 +290,9 @@ class RDPAProvider(BaseProvider):
                                                         temp_geom_minup)
             minx2up, maxy2up = upleft_coord['coordinates']
 
-            dwonright_coord = rasterio.warp.transform_geom(crs_src, crs_dest,
+            downright_coord = rasterio.warp.transform_geom(crs_src, crs_dest,
                                                            temp_geom_maxdown)
-            maxx2down, miny2down = dwonright_coord['coordinates']
+            maxx2down, miny2down = downright_coord['coordinates']
 
             LOGGER.debug('Source coordinates: {}'.format(
                 [minx, miny, maxx, maxy]))
