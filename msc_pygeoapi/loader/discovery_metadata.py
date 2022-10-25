@@ -43,7 +43,7 @@ from msc_pygeoapi.util import configure_es_connection
 LOGGER = logging.getLogger(__name__)
 
 # index settings
-INDEX_NAME = 'discovery-metadata'
+INDEX_NAME = 'lp-discovery-metadata'
 
 SETTINGS = {
     'settings': {
@@ -156,7 +156,7 @@ def add(ctx, directory, es, username, password, ignore_certs):
     passed = 0
     failed = 0
 
-    click.echo('Processing discovery metadata in {}'.format(directory))
+    #click.echo('Processing discovery metadata in {}'.format(directory))
     for root, dirs, files in os.walk('{}/mcf'.format(directory)):
         for name in files:
             total += 1
@@ -165,15 +165,16 @@ def add(ctx, directory, es, username, password, ignore_certs):
                 continue
             mcf_file = ('{}/{}'.format(root, name))
             try:
-                click.echo('Processing MCF file {}'.format(mcf_file))
+                #click.echo('Processing MCF file {}'.format(mcf_file))
                 metadata = loader.generate_metadata(mcf_file)
                 _ = loader.load_data(metadata)
                 passed += 1
             except Exception:
                 failed += 1
+                click.echo('failed:{}'.format(mcf_file))
                 continue
 
-    click.echo('Results')
+    #click.echo('Results')
     click.echo('Total: {}'.format(total))
     click.echo('Passed: {}'.format(passed))
     click.echo('Failed: {}'.format(failed))
