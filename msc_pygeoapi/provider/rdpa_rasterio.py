@@ -64,9 +64,14 @@ class RDPAProvider(BaseProvider):
         try:
             self.file_list = []
 
-            pattern = 'CMC_RDPA_{}cutoff'
-            self.var = search(pattern, self.data)[0]
-            self.get_file_list(self.var)
+            if 'cutoff' in self.data:
+                pattern = 'CMC_RDPA_{}cutoff'
+                self.var = search(pattern, self.data)[0]
+                self.get_file_list(self.var)
+            else:
+                pattern = 'MSC_RDPA_{}_Sfc'
+                self.var = search(pattern, self.data)[0]
+                self.get_file_list(self.var)
 
             if '*' in self.data:
                 self.data = self.file_list[-1]
