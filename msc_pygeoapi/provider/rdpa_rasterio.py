@@ -69,31 +69,23 @@ class RDPAProvider(BaseProvider):
                 self.var = search(pattern, self.data)[0]
                 self.get_file_list(self.var)
             else:
-                pattern = 'MSC_RDPA_{}_Sfc'
+                pattern = 'APCP-{}_Sfc'
                 self.var = search(pattern, self.data)[0]
                 self.get_file_list(self.var)
 
             if '*' in self.data:
                 self.data = self.file_list[-1]
 
+            if 'RLatLon0.09' in self.data:
+                self.timeformat = '%Y%m%dT%HZ'
+            else:
+                self.timeformat = '%Y%m%d%H'
+
             self._data = rasterio.open(self.data)
             self._coverage_properties = self._get_coverage_properties()
             self.axes = self._coverage_properties['axes']
             self.axes.append('time')
 
-            # Rasterio does not read the crs and transform function
-            # properly from the file, we have to set them manually
-            # The CRS is the same for both RDPA resolution
-            # the transform array is different for the 15 km and 10 km files
-            self.crs = '+proj=stere +lat_0=90 +lat_ts=60 +lon_0=249 +x_0=0 +y_0=0 +R=6371229 +units=m +no_defs' # noqa
-            if '10km' in self.data:
-                self.transform = (-4556441.403315245, 10000.0,
-                                  0.0, 920682.1411659503, 0.0, -10000.0)
-            else:
-                self.transform = (-2618155.4458640157, 15000.0,
-                                  0.0, 7508.80818105489, 0.0, -15000.0)
-            self._data._crs = self.crs
-            self._data._transform = self.transform
             self.num_bands = self._coverage_properties['num_bands']
             self.fields = [str(num) for num in range(1, self.num_bands+1)]
             self.native_format = provider_def['format']['name']
@@ -194,7 +186,7 @@ class RDPAProvider(BaseProvider):
 
         # 10km preliminary (0100cutoff) data
         else:
-            if 'APCP-006-0100' in self.data:
+            if 'APCP-006-0100' in self.data or 'Accum6h' in self.data :
                 time_axis['resolution'] = 6
             begin, end = self.get_end_time_from_file()
 
@@ -284,7 +276,7 @@ class RDPAProvider(BaseProvider):
             minx, miny, maxx, maxy = bbox
 
             crs_src = CRS.from_epsg(4326)
-            crs_dest = CRS.from_string(self.crs)
+            crs_dest = self._data._crs
 
             LOGGER.debug('source bbox CRS and data CRS are different')
             LOGGER.debug('reprojecting bbox into native coordinates')
@@ -349,7 +341,9 @@ class RDPAProvider(BaseProvider):
             if '/' not in datetime_:
                 try:
                     period = datetime.strptime(
-                        datetime_, '%Y-%m-%dT%HZ').strftime('%Y%m%d%H')
+                        datetime_, '%Y-%m-%dT%HZ').strftime(self.timeformat)
+                    LOGGER.debug(period)
+                    LOGGER.debug(self.file_list)
                     self.data = [v for v in self.file_list if period in v][0]
                 except IndexError as err:
                     msg = 'Datetime value invalid or out of time domain'
@@ -366,9 +360,6 @@ class RDPAProvider(BaseProvider):
 
         with rasterio.open(self.data) as _data:
             LOGGER.debug('Creating output coverage metadata')
-            _data._crs = self.crs
-            _data._transform = self.transform
-
             out_meta = _data.meta
 
             if self.options is not None:
@@ -417,6 +408,8 @@ class RDPAProvider(BaseProvider):
             self.filename = self.data.split('/')[-1].replace(
                 '*', '')
 
+            LOGGER.debug(f'out_meta: {out_meta}')
+
             # CovJSON output does not support multiple bands yet
             # Only the first timestep is returned
             if format_ == 'json':
@@ -439,8 +432,6 @@ class RDPAProvider(BaseProvider):
                             for id, layer in enumerate(date_file_list,
                                                        start=1):
                                 with rasterio.open(layer) as src1:
-                                    src1._crs = self.crs
-                                    src1._transform = self.transform
                                     if shapes:  # spatial subset
                                         try:
                                             LOGGER.debug('Clipping data')
@@ -457,17 +448,24 @@ class RDPAProvider(BaseProvider):
                                     else:
                                         out_image = src1.read(
                                             indexes=args['indexes'])
-
                                     dest.write_band(id, out_image[0])
 
                         # return data in native format
                         LOGGER.debug('Returning data in native format')
+                        LOGGER.debug(f'CRS: {memfile.crs}')
                         return memfile.read()
                 else:
                     LOGGER.debug('Serializing data in memory')
                     out_meta.update(count=len(args['indexes']))
                     with MemoryFile() as memfile:
                         with memfile.open(**out_meta, nbits=nbits) as dest:
+                            
+                            crs = '+proj=ob_tran +o_proj=longlat +o_lon_p=0 +o_lat_p=31.758312 +lon_0=-92.402969 +R=6371229 +no_defs'
+                            # from osgeo import ogr, osr
+                            # srs = osr.SpatialReference()
+                            # srs.ImportFromProj4(crs)
+                            # out_meta.update({'crs': CRS.from_wkt(srs.ExportToWkt())})                            
+                            out_image._crs = crs
                             dest.write(out_image)
 
                         # return data in native format
@@ -574,7 +572,7 @@ class RDPAProvider(BaseProvider):
                 self._data.bounds.right,
                 self._data.bounds.top
             ],
-            'bbox_crs': 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            'bbox_crs': 'http://www.opengis.net/def/crs/OGC/1.3',
             'crs_type': 'GeographicCRS',
             'bbox_units': 'deg',
             'x_axis_label': 'Long',
@@ -626,9 +624,9 @@ class RDPAProvider(BaseProvider):
                 begin, end = datetime_.split('/')
 
                 begin = datetime.strptime(begin, '%Y-%m-%dT%HZ').\
-                    strftime('%Y%m%d%H')
+                    strftime(self.timeformat)
                 end = datetime.strptime(end, '%Y-%m-%dT%HZ').\
-                    strftime('%Y%m%d%H')
+                    strftime(self.timeformat)
 
                 begin_file_idx = [file_path_.index(i) for i
                                   in file_path_ if begin in i]
@@ -653,13 +651,23 @@ class RDPAProvider(BaseProvider):
         :returns: list of begin and end time as string
         """
 
-        pattern = 'ps10km_{}_000.grib2'
+        if 'RLatLon0.09' in self.file_list[0]:
+            pattern = '{}_MSC_RDPA'
 
-        begin = search(pattern, self.file_list[0])[0]
-        begin = datetime.strptime(begin, '%Y%m%d%H').strftime('%Y-%m-%dT%HZ')
+            begin = search(pattern, self.file_list[0].split('/')[-1])[0]
+            begin = datetime.strptime(begin, self.timeformat).strftime('%Y-%m-%dT%HZ')
 
-        end = search(pattern, self.file_list[-1])[0]
-        end = datetime.strptime(end, '%Y%m%d%H').strftime('%Y-%m-%dT%HZ')
+            end = search(pattern, self.file_list[-1].split('/')[-1])[0]
+            end = datetime.strptime(end, self.timeformat).strftime('%Y-%m-%dT%HZ')
+
+        else:
+            pattern = 'ps10km_{}_000.grib2'
+
+            begin = search(pattern, self.file_list[0])[0]
+            begin = datetime.strptime(begin, self.timeformat).strftime('%Y-%m-%dT%HZ')
+
+            end = search(pattern, self.file_list[-1])[0]
+            end = datetime.strptime(end, self.timeformat).strftime('%Y-%m-%dT%HZ')
 
         return [begin, end]
 
