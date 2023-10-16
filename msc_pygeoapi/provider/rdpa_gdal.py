@@ -3,8 +3,7 @@
 # Authors: Louis-Philippe Rousseau-Lambert
 #           <louis-philippe.rousseaulambert@ec.gc.ca>
 #
-# Copyright (c) 2022 Louis-Philippe Rousseau-Lambert
-# Copyright (c) 2023 Tom Kralidis
+# Copyright (c) 2023 Louis-Philippe Rousseau-Lambert
 #
 #
 # Permission is hereby granted, free of charge, to any person
@@ -34,6 +33,7 @@ from datetime import datetime
 import logging
 from parse import search
 
+from osgeo import gdal, osr
 import rasterio
 from rasterio.crs import CRS
 from rasterio.io import MemoryFile
@@ -305,15 +305,112 @@ class RDPAGDALProvider(RDPAProvider):
                 else:
                     LOGGER.debug('Serializing data in memory')
                     out_meta.update(count=len(args['indexes']))
-                    with MemoryFile() as memfile:
-                        with memfile.open(**out_meta, nbits=nbits) as dest:
+
+                    # gd_driver = gdal.GetDriverByName("MEM")
+                    # gd_raster = gd_driver.Create('',
+                    #                              out_meta['width'],
+                    #                              out_meta['height'],
+                    #                              out_meta['count'],
+                    #                              gdal.GDT_Float32)
+
+                    # gd_raster.SetGeoTransform([out_meta['transform'][2],
+                    #                            out_meta['transform'][0],
+                    #                            out_meta['transform'][1],
+                    #                            out_meta['transform'][5],
+                    #                            out_meta['transform'][3],
+                    #                            out_meta['transform'][4]])
+
+                    # crs = '+proj=ob_tran +o_proj=longlat +o_lon_p=0 +o_lat_p=31.758312 +lon_0=-92.402969 +R=6371229 +no_defs'
+                    # srs = osr.SpatialReference()
+                    # srs.ImportFromProj4(crs)
+                    # gd_raster.SetProjection(srs.ExportToWkt())
+
+                    # print(out_meta['height'], out_meta['width'])
+                    # print(out_image[0].shape)
+                    # print(out_meta['count'])
+                    # print(gd_raster.RasterXSize)
+                    # print(gd_raster.RasterYSize)
+
+                    # # for i in (0, out_meta['count']):
+                    # #     print(i)
+                    # gd_raster.GetRasterBand(1).WriteArray(out_image[0])
+
+                    # print(type(gd_raster))
+                    # print(type(gd_raster.ReadRaster()))
+
+                    # # vsimem_data = '/vsimem/foo.grib2'
+                    # # gdal.FileFromMemBuffer(vsimem_data, gd_raster.ReadRaster())
+
+                    # # dest = gdal.Open(self.data)
+
+                    # out_ds = gdal.Translate('./in_memory_output.grib2', gd_raster)
+
+
+                    # #return out_ds.ReadRaster()
+
+                    # # with gdal.VSIFOpenL('/vsimem/RDPA.grib2', 'rb') as mem_file:
+                    # #     print(type(mem_file))
+                    # #     print(type(mem_file.read()))
+                    # #     return mem_file.read()
+
+                    # import io
+
+                    # band = out_ds.GetRasterBand(1)  # Assuming you want data from the first band
+                    # width = band.XSize
+                    # height = band.YSize
+                    # data_type = band.DataType
+
+                    # data_buffer = out_ds.ReadRaster(0, 0, width, height, width, height, data_type)
+                    # data_stream = io.BytesIO(data_buffer)
+                    # data_bytes = data_stream.getvalue()
+
+                    # print(type(data_buffer))
+                    # print(type(data_stream))
+                    # print(type(data_bytes))
+                    # print(self.data)
+                    # print(out_ds.GetDriver().ShortName)
+                    # print(gd_raster.GetDriver().ShortName)
+                    # print(out_ds.GetMetadata())
+                    # print(gd_raster.GetMetadata())
+
+                    # srs = osr.SpatialReference()
+                    # srs.ImportFromWkt(gd_raster.GetProjectionRef())
+                    # crs_mem = srs.ExportToProj4()
+                    # srs = osr.SpatialReference()
+                    # srs.ImportFromWkt(out_ds.GetProjectionRef())
+                    # crs_grib2 = srs.ExportToProj4()
+
+                    # print(f'mem file: {crs_mem}')
+                    # print(f'grib2 file: {crs_grib2}')
+
+                    # return data_bytes
+
+                    # return data_bytes
+
+                    # with MemoryFile() as memfile:
+                    #     with memfile.open(**out_meta, nbits=nbits) as dest:
                             
-                            crs = '+proj=ob_tran +o_proj=longlat +o_lon_p=0 +o_lat_p=31.758312 +lon_0=-92.402969 +R=6371229 +no_defs'
-                            # from osgeo import ogr, osr
-                            # srs = osr.SpatialReference()
-                            # srs.ImportFromProj4(crs)
-                            # out_meta.update({'crs': CRS.from_wkt(srs.ExportToWkt())})                            
-                            out_image._crs = crs
+                    #         crs = '+proj=ob_tran +o_proj=longlat +o_lon_p=0 +o_lat_p=31.758312 +lon_0=-92.402969 +R=6371229 +no_defs'
+                    #         # from osgeo import ogr, osr
+                    #         # srs = osr.SpatialReference()
+                    #         # srs.ImportFromProj4(crs)
+                    #         # out_meta.update({'crs': CRS.from_wkt(srs.ExportToWkt())})                            
+                    #         #out_image._crs = crs
+                    #         dest.write(out_image)
+
+                    #         print(out_meta)
+
+                    #         # return data in native format
+                    #         LOGGER.debug('Returning data in native format')
+                    #         print(type(memfile.read()))
+                    #         return memfile.read()
+
+
+                    LOGGER.debug('Serializing data in memory')
+                    out_meta.update(count=len(args['indexes']))
+                    with MemoryFile() as memfile:
+                        #with memfile.open(**out_meta, nbits=nbits) as dest:
+                        with memfile.open(self.data) as dest:
                             dest.write(out_image)
 
                         # return data in native format

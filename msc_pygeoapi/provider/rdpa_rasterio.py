@@ -3,7 +3,7 @@
 # Authors: Louis-Philippe Rousseau-Lambert
 #           <louis-philippe.rousseaulambert@ec.gc.ca>
 #
-# Copyright (c) 2022 Louis-Philippe Rousseau-Lambert
+# Copyright (c) 2023 Louis-Philippe Rousseau-Lambert
 # Copyright (c) 2023 Tom Kralidis
 #
 #
@@ -459,13 +459,6 @@ class RDPAProvider(BaseProvider):
                     out_meta.update(count=len(args['indexes']))
                     with MemoryFile() as memfile:
                         with memfile.open(**out_meta, nbits=nbits) as dest:
-                            
-                            crs = '+proj=ob_tran +o_proj=longlat +o_lon_p=0 +o_lat_p=31.758312 +lon_0=-92.402969 +R=6371229 +no_defs'
-                            # from osgeo import ogr, osr
-                            # srs = osr.SpatialReference()
-                            # srs.ImportFromProj4(crs)
-                            # out_meta.update({'crs': CRS.from_wkt(srs.ExportToWkt())})                            
-                            out_image._crs = crs
                             dest.write(out_image)
 
                         # return data in native format
