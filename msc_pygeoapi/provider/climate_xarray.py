@@ -3,7 +3,7 @@
 # Authors: Louis-Philippe Rousseau-Lambert
 #          <louis-philippe.rousseaulambert@ec.gc.ca>
 #
-# Copyright (c) 2022 Louis-Philippe Rousseau-Lambert
+# Copyright (c) 2023 Louis-Philippe Rousseau-Lambert
 # Copyright (c) 2023 Tom Kralidis
 #
 # Permission is hereby granted, free of charge, to any person
@@ -31,6 +31,7 @@
 
 import logging
 import tempfile
+import re
 
 import numpy as np
 import xarray
@@ -59,17 +60,24 @@ class ClimateProvider(XarrayProvider):
         BaseProvider.__init__(self, provider_def)
 
         try:
+            self.is_season = False
+            self.is_avg = False
             self._data = open_data(self.data)
             self._coverage_properties = self._get_coverage_properties()
 
             self.axes = [self._coverage_properties['x_axis_label'],
                          self._coverage_properties['y_axis_label']]
 
-            if 'RCP' in self.data:
-                self.axes.append('scenario')
             if 'season' in self.data:
+                self.is_season = True
+            if any(avg in self.data for avg in ['avg_20years', 'P0Y']):
+                self.is_avg = True
+            
+            if any(scenario in self.data for scenario in ['RCP', 'SSP']):
+                self.axes.append('scenario')
+            if self.is_season:
                 self.axes.append('season')
-            if 'avg_20years' not in self.data:
+            if not self.is_avg:
                 self.axes.extend([self._coverage_properties['time_axis_label'],
                                   'percentile'])
             else:
@@ -95,7 +103,7 @@ class ClimateProvider(XarrayProvider):
         new_axis_name = []
         new_axis = []
 
-        if 'avg_20years' not in self.data:
+        if not self.is_avg:
             new_axis_name.extend(['percentile'])
             new_axis.extend([{
                              'type': 'IrregularAxis',
@@ -128,8 +136,16 @@ class ClimateProvider(XarrayProvider):
                              'coordinate': ['RCP2.6', 'RCP4.5', 'RCP8.5']
                              }])
             new_axis_name.append('scenario')
+        elif 'SSP' in self.data:
+            new_axis.extend([{
+                             'type': 'IrregularAxis',
+                             'axisLabel': 'scenario',
+                             'coordinate': ['SSP126', 'SSP245',
+                                            'SSP370', 'SSP585']
+                             }])
+            new_axis_name.append('scenario')
 
-        if 'season' in self.data:
+        if self.is_season:
             new_axis.extend([{
                              'type': 'IrregularAxis',
                              'axisLabel': 'season',
@@ -256,7 +272,7 @@ class ClimateProvider(XarrayProvider):
             properties['y_axis_label']
         ]
 
-        if 'avg_20years' not in self.data:
+        if not self.is_avg:
             properties['axes'].append(properties['time_axis_label'])
             properties['time_duration'] = self.get_time_coverage_duration()
             properties['restime'] = self.get_time_resolution()
@@ -339,9 +355,10 @@ class ClimateProvider(XarrayProvider):
                     msg = 'multiple scenario are not supported'
                     LOGGER.error(msg)
                     raise ProviderQueryError(msg)
-                elif scenario[0] not in ['RCP2.6', 'hist']:
-                    scenario_value = scenario[0].replace('RCP', '')
-                    self.data = self.data.replace('2.6', scenario_value)
+                elif scenario[0] not in ['RCP2.6', 'hist', 'SSP126']:
+                    scenario_value = re.sub('\D', '', scenario[0])
+                    self.data = re.sub('2.6|126', scenario_value, self.data)
+
             except Exception as err:
                 LOGGER.error(err)
                 raise ProviderQueryError(err)
@@ -481,7 +498,7 @@ class ClimateProvider(XarrayProvider):
                             slice(bbox[3], bbox[1])
 
             if datetime_ is not None:
-                if 'avg_20years' in self.data:
+                if self.is_avg:
                     msg = 'datetime not suported for 20 years average layers'
                     LOGGER.error(msg)
                     raise ProviderQueryError(msg)
@@ -530,7 +547,7 @@ class ClimateProvider(XarrayProvider):
                           for var_name, var in data.variables.items()}
         }
 
-        if 'avg_20years' not in self.data:
+        if not self.is_avg:
             out_meta["time"] = [
                 self._to_datetime_string(
                     data.coords[self.time_field].values[0]),
