@@ -77,11 +77,41 @@ class ClimateProvider(XarrayProvider):
             else:
                 self.axes.append('P20Y-Avg')
 
-            self.fields = self._coverage_properties['fields']
+            #self.fields = self._coverage_properties['fields']
+            self.fields = self.get_fields()
+
+            LOGGER.debug(f'self._coverage_properties: {self._coverage_properties}'.replace("'", '"'))
+            LOGGER.debug(f'self.fields: {self.fields}'.replace("'", '"'))
 
         except Exception as err:
             LOGGER.warning(err)
             raise ProviderConnectionError(err)
+
+    def get_fields(self):
+        fields = {}
+
+        for key, value in self._data.variables.items():
+            if len(value.shape) >= 3:
+                LOGGER.debug('Adding variable')
+                dtype = value.dtype
+                if dtype.name.startswith('float'):
+                    dtype = 'number'
+
+                isnan_values = np.isnan(value.values)
+
+                fields[key] = {
+                    'type': dtype,
+                    'title': value.attrs['long_name'],
+                    'x-ogc-unit': value.attrs.get('units'),
+                    'min': value.values[~isnan_values].min(),
+                    'max': value.values[~isnan_values].max(),
+                    'count': len(value),
+                    '_meta': {
+                        'tags': value.attrs
+                    }
+                }
+
+        return fields
 
     def get_coverage_domainset(self):
         """
