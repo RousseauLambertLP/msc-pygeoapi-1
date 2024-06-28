@@ -115,8 +115,8 @@ class ThunderstormOutlookLoader(BaseLoader):
             for item, values in metobj.items():
                 try:
                     metobj_flat_item = self.flatten_json(item, values, 'metobject')
-                    # metobj_flat_item = {'metobject.severity.value' = X}
                     feature['properties'].update(metobj_flat_item)
+                    feature['properties']['filepath'] = self.filepath
                 except Exception as err:
                     msg = f'Error while flattening Thunderstorm JSON {err}'
                     LOGGER.error(f'{msg}')
