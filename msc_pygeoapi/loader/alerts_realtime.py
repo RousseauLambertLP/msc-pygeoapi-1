@@ -331,6 +331,20 @@ class AlertsRealtimeLoader(BaseLoader):
                                              'alerts',
                                              'dms-alerts.json')
             LOGGER.debug(f'new local file: {alerts_local_path}')
+
+            order = {
+                None: 0,
+                "yellow": 1,
+                "orange": 2,
+                "red": 3
+            }
+
+            def sort_by_colour(feature):
+                value = feature['properties'].get('risk_colour_en')
+                return order.get(value, 0)
+
+            data['features'] = sorted(data['features'], key=sort_by_colour)
+
             with open(alerts_local_path, 'w', encoding='utf-8') as alerts:
                 alerts.write(json.dumps(data))
 
