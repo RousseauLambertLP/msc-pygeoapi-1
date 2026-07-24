@@ -31,17 +31,22 @@
 # =================================================================
 
 import glob
+import io
 import logging
 import os
 from parse import search
 import pathlib
 
+import numpy as np
 import rasterio
 from rasterio.crs import CRS
 from rasterio.io import MemoryFile
 import rasterio.mask
+import rasterio.warp
+from rasterio.transform import array_bounds
 
 from pygeoapi.provider.base import (ProviderConnectionError,
+                                    ProviderInvalidDataError,
                                     ProviderQueryError)
 
 from pygeoapi.provider.rasterio_ import RasterioProvider
@@ -314,6 +319,7 @@ class CanGRDProvider(RasterioProvider):
 
             # CovJSON output does not support multiple bands yet
             # Only the first timestep is returned
+            LOGGER.debug(out_meta)
             if format_ == 'json':
                 if date_file_list:
                     err = 'Date range not yet supported for CovJSON output'
@@ -328,7 +334,7 @@ class CanGRDProvider(RasterioProvider):
                                             maxx2,
                                             maxy2]
                     return self.gen_covjson(out_meta, out_image, var)
-            else:
+            elif format_.lower() == 'gtiff':
                 if date_file_list:
                     LOGGER.debug('Serializing data in memory')
                     with MemoryFile() as memfile:
@@ -368,6 +374,12 @@ class CanGRDProvider(RasterioProvider):
                         # return data in native format
                         LOGGER.debug('Returning data in native format')
                         return memfile.read()
+
+            else:
+                msg = f'Invalid format ({format_})'
+                raise ProviderQueryError(user_msg=msg)
+
+
 
     def _get_coverage_properties(self):
         """
