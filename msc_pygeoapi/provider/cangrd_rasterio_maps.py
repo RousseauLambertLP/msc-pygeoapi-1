@@ -2,10 +2,8 @@
 #
 # Authors: Louis-Philippe Rousseau-Lambert
 #          <louis-philippe.rousseaulambert@ec.gc.ca>
-#          Tom Kralidis <tom.kralidis@ec.gc.ca>
 #
-# Copyright (c) 2023 Tom Kralidis
-# Copyright (c) 2025 Louis-Philippe Rousseau-Lambert
+# Copyright (c) 2026 Louis-Philippe Rousseau-Lambert
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -138,21 +136,50 @@ class CanGRDMapsProvider(CanGRDProvider):
         with rasterio.open(self.data) as _data:
             LOGGER.debug('Creating output coverage metadata')
 
+            LOGGER.debug(f'{format_=}')
+            LOGGER.debug(f'{crs=}')
+
             if format_.lower() == 'png':
 
                 maps_crs = CRS.from_string(crs)
                 src_crs = _data.crs
 
+                if 'bbox-crs' in kwargs:
+                    bbox_crs = CRS.from_string(kwargs['bbox-crs'])
+                else:
+                    bbox_crs = maps_crs
+
+                # this is required in order to add the bounds if missing 
+                plt_crs = ccrs.Projection(maps_crs)
+
+                if not plt_crs.bounds:
+                    # we need to set the msc_crs projection bounds
+                    default_crs = CRS.from_string(DEFAULT_CRS)
+                    def_left, def_bottom, def_right, def_top = [-180, -90, 180, 90]
+                    
+                    x_min, y_min, x_max, y_max = transform_bounds(default_crs,
+                                                                  maps_crs,
+                                                                  def_left,
+                                                                  def_bottom,
+                                                                  def_right,
+                                                                  def_top)
+                    plt_crs.bounds = (x_min, x_max, y_min, y_max)
+
+                LOGGER.debug(f'{bbox_crs=}')
+                LOGGER.debug(f'{maps_crs=}')
+                LOGGER.debug(f'{src_crs=}')
+
                 with reproject_raster(_data,
                                       maps_crs,
                                       src_crs,
+                                      bbox_crs,
                                       width,
                                       height,
                                       bbox) as in_mem_ds:
 
-                    fig = plt.figure(figsize=(width / self.dpi, width / self.dpi),
+                    fig = plt.figure(figsize=(width / self.dpi, height / self.dpi),
                                 dpi=self.dpi)
-                    ax = plt.axes(projection=ccrs.Projection(maps_crs))
+                    ax = plt.axes(projection=plt_crs)
                     ax.set_position([0, 0, 1, 1])  # left, bottom, width, height (0–1)
                     
                     if self.coastlines:
@@ -166,7 +193,6 @@ class CanGRDMapsProvider(CanGRDProvider):
 
                     LOGGER.debug(f'{in_mem_ds.bounds=}')
                     LOGGER.debug(f'{in_mem_ds.meta=}')
-                    #LOGGER.debug(f'{bbox=}')
 
                     ax.imshow(
                         in_mem_ds.read(indexes=1),
@@ -194,23 +220,24 @@ class CanGRDMapsProvider(CanGRDProvider):
                 raise ProviderQueryError(user_msg=msg)
 
 
-@contextmanager  
-def reproject_raster(_data, maps_crs, src_crs, width, height, bbox):
+@contextmanager
+def reproject_raster(_data, maps_crs, src_crs, bbox_crs, width, height, bbox):
 
-    # update bbox for src <--> crs
-    # Converting the input bbox into the _data.crs bbox 
+    # update bbox for src <--> dst crs
+    # Converting the input bbox (bbox_crs) into the _data.crs bbox 
     x = np.array([bbox[0], bbox[2]])
     y = np.array([bbox[1], bbox[3]])
 
-    x_dst, y_dst = rasterio.warp.transform(maps_crs,
+    x_dst, y_dst = rasterio.warp.transform(bbox_crs,
                                            src_crs,
                                            x,
                                            y)
 
+    # bbox in data (src) crs
     left, right = x_dst
     bottom, top = y_dst
 
-    # reproject raster to requested crs and bbox (in dst_crs)
+    # reproject raster to requested crs and bbox (in dst crs)
     transform, t_width, t_height = calculate_default_transform(
         src_crs, maps_crs, _data.width, _data.height,
         dst_width=width, dst_height=height,
