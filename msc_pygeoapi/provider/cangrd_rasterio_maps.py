@@ -157,12 +157,15 @@ class CanGRDMapsProvider(CanGRDProvider):
                     default_crs = CRS.from_string(DEFAULT_CRS)
                     def_left, def_bottom, def_right, def_top = [-180, -90, 180, 90]
                     
+                    # input default crs and default crs bbox
+                    # output is bbox in maps_crs
                     x_min, y_min, x_max, y_max = transform_bounds(default_crs,
                                                                   maps_crs,
                                                                   def_left,
                                                                   def_bottom,
                                                                   def_right,
                                                                   def_top)
+                    
                     plt_crs.bounds = (x_min, x_max, y_min, y_max)
 
                 LOGGER.debug(f'{bbox_crs=}')
@@ -180,7 +183,8 @@ class CanGRDMapsProvider(CanGRDProvider):
                     fig = plt.figure(figsize=(width / self.dpi, height / self.dpi),
                                 dpi=self.dpi)
                     ax = plt.axes(projection=plt_crs)
-                    ax.set_position([0, 0, 1, 1])  # left, bottom, width, height (0–1)
+                    # left, bottom, width, height (0–1)
+                    ax.set_position([0, 0, 1, 1])
                     
                     if self.coastlines:
                         LOGGER.debug('Setting coastlines')
