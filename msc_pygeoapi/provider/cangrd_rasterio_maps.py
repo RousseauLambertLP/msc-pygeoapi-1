@@ -136,9 +136,6 @@ class CanGRDMapsProvider(CanGRDProvider):
         with rasterio.open(self.data) as _data:
             LOGGER.debug('Creating output coverage metadata')
 
-            LOGGER.debug(f'{format_=}')
-            LOGGER.debug(f'{crs=}')
-
             if format_.lower() == 'png':
 
                 maps_crs = CRS.from_string(crs)
@@ -153,24 +150,27 @@ class CanGRDMapsProvider(CanGRDProvider):
                 plt_crs = ccrs.Projection(maps_crs)
 
                 if not plt_crs.bounds:
-                    # we need to set the msc_crs projection bounds
-                    default_crs = CRS.from_string(DEFAULT_CRS)
-                    def_left, def_bottom, def_right, def_top = [-180, -90, 180, 90]
+                    # # we need to set the msc_crs projection bounds
+                    # default_crs = CRS.from_string(DEFAULT_CRS)
+                    # def_left, def_bottom, def_right, def_top = [-180, -90, 180, 90]
                     
-                    # input default crs and default crs bbox
-                    # output is bbox in maps_crs
-                    x_min, y_min, x_max, y_max = transform_bounds(default_crs,
-                                                                  maps_crs,
-                                                                  def_left,
-                                                                  def_bottom,
-                                                                  def_right,
-                                                                  def_top)
+                    # # input default crs and default crs bbox
+                    # # output is bbox in maps_crs
+                    # x_min, y_min, x_max, y_max = transform_bounds(default_crs,
+                    #                                               maps_crs,
+                    #                                               def_left,
+                    #                                               def_bottom,
+                    #                                               def_right,
+                    #                                               def_top)
                     
-                    plt_crs.bounds = (x_min, x_max, y_min, y_max)
+                    # plt_crs.bounds = (x_min, x_max, y_min, y_max)
+
+                    plt_crs.bounds = (-20037508.342789244, 20037508.342789244, -20048966.104014594, 20048966.104014594)
 
                 LOGGER.debug(f'{bbox_crs=}')
                 LOGGER.debug(f'{maps_crs=}')
-                LOGGER.debug(f'{src_crs=}')
+                # LOGGER.debug(f'{src_crs=}')
+                LOGGER.debug(f'{bbox=}')
 
                 with reproject_raster(_data,
                                       maps_crs,
