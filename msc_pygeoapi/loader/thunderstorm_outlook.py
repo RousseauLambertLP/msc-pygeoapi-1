@@ -3,7 +3,7 @@
 # Author: Louis-Philippe Rousseau-Lambert
 #             <louis-philippe.rousseaulambert@ec.gc.ca>
 #
-# Copyright (c) 2024 Louis-Philippe Rousseau-Lambert
+# Copyright (c) 2026 Louis-Philippe Rousseau-Lambert
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -39,6 +39,7 @@ import click
 
 from msc_pygeoapi import cli_options
 from msc_pygeoapi.connector.elasticsearch_ import ElasticsearchConnector
+from msc_pygeoapi.env import GEOMET_LOCAL_BASEPATH
 from msc_pygeoapi.loader.base import BaseLoader
 from msc_pygeoapi.util import configure_es_connection
 
@@ -223,6 +224,82 @@ class ThunderstormOutlookLoader(BaseLoader):
 
         return {'update': upt_, 'id_list': id_list}
 
+    def generate_local_copy(self):
+        """
+        Query Elasticsearch for all thunderstorm outlooks features
+        and write them as a GeoJSON FeatureCollection to the local filesystem
+        at::
+
+            GEOMET_LOCAL_BASEPATH/thunderstorm-outlooks/active-thunderstorm-outlooks.json
+
+        The output directory is created if it does not already exist.
+
+        :returns: `bool` of status result
+        """
+
+        self.conn.Elasticsearch.indices.refresh(
+            index=INDEX_NAME,
+            ignore_unavailable=True
+        )
+
+        query = {
+            'query': {'match_all': {}}
+        }
+
+        features = []
+
+        try:
+            count_result = self.conn.Elasticsearch.count(
+                index=INDEX_NAME,
+                body=query,
+                ignore_unavailable=True
+            )
+            total = count_result['count']
+
+            LOGGER.info(f'{total} items found for {INDEX_NAME}')
+
+            page_size = 10000
+            offset = 0
+
+            while offset < total:
+                result = self.conn.Elasticsearch.search(
+                    index=INDEX_NAME,
+                    body=query,
+                    size=page_size,
+                    from_=offset,
+                    ignore_unavailable=True
+                )
+                hits = result.get('hits', {}).get('hits', [])
+                for hit in hits:
+                    features.append(hit['_source'])
+                offset += page_size
+
+        except Exception as err:
+            LOGGER.warning(f'Failed to query ES for local copy: {err}')
+            return False
+
+        feature_collection = {
+            'type': 'FeatureCollection',
+            'features': features
+        }
+
+        json_filename = 'active-thunderstorm-outlooks.json'
+        output_path = os.path.join(GEOMET_LOCAL_BASEPATH,
+                                    'thunderstorm-outlooks',
+                                    json_filename)
+
+        output_dir = os.path.dirname(output_path)
+
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+            with open(output_path, 'w') as f:
+                json.dump(feature_collection, f)
+            LOGGER.debug(f'Local copy written to {output_path}')
+        except Exception as err:
+            LOGGER.warning(f'Failed to write local copy to {output_path}: {err}')  # noqa
+
+        return True
+
     def load_data(self, filepath):
         """
         loads data from event to target
@@ -239,6 +316,10 @@ class ThunderstormOutlookLoader(BaseLoader):
         try:
             r = self.conn.submit_elastic_package(package)
             LOGGER.debug(f'Result: {r}')
+
+            LOGGER.debug(f'Creating local copy for GeoMet-Weather')
+            self.generate_local_copy()
+
             return True
         except Exception as err:
             LOGGER.warning(f'Error indexing: {err}')
@@ -315,6 +396,10 @@ def clean_outlooks(ctx, es, username, password, ignore_certs):
 
     conn.Elasticsearch.delete_by_query(index=INDEX_NAME, body=query)
 
+    click.echo('Creating a local copy of thunderstorm outlooks')
+    loader = ThunderstormOutlookLoader(conn_config)
+    loader.generate_local_copy()
+
 
 @click.command()
 @click.pass_context
@@ -327,7 +412,7 @@ def clean_outlooks(ctx, es, username, password, ignore_certs):
     prompt='Are you sure you want to delete this index?'
 )
 def delete_index(ctx, es, username, password, ignore_certs, index_template):
-    """Delete cumulative effects hotspots index"""
+    """Delete thunderstorm outlooks index"""
 
     conn_config = configure_es_connection(es, username, password, ignore_certs)
     conn = ElasticsearchConnector(conn_config)
