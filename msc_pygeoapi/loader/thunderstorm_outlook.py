@@ -242,6 +242,18 @@ class ThunderstormOutlookLoader(BaseLoader):
             ignore_unavailable=True
         )
 
+        indexes_to_fetch = []
+        if dataset == 'all':
+            for alert_type in ['alpha', 'dev', 'stage']:
+                idx_name = '{}*'.format(INDEX_BASENAME.format(alert_type))
+                indexes_to_fetch.append(idx_name)
+        else:
+            indexes_to_fetch = '{}*'.format(INDEX_BASENAME.format(dataset))
+
+        indexes = conn.get(indexes_to_fetch)
+
+    click.echo(f'indexes: {indexes}')
+
         query = {
             'query': {'match_all': {}}
         }
