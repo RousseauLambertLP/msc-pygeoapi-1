@@ -36,6 +36,7 @@ from pathlib import Path
 import re
 
 import click
+import parse
 
 from msc_pygeoapi import cli_options
 from msc_pygeoapi.connector.elasticsearch_ import ElasticsearchConnector
@@ -46,8 +47,8 @@ from msc_pygeoapi.util import configure_es_connection
 LOGGER = logging.getLogger(__name__)
 
 # index settings
-INDEX_NAME = 'thunderstorm_outlook'
-
+INDEX_BASENAME = 'lp-thunderstorm_outlook-'
+JSON_FILENAME = 'lp-active-thunderstorm-outlooks.json'
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 MAPPINGS = {
@@ -73,7 +74,8 @@ MAPPINGS = {
 }
 
 SETTINGS = {
-    'settings': {'number_of_shards': 1, 'number_of_replicas': 0}
+    'settings': {'number_of_shards': 1, 'number_of_replicas': 0},
+    'mappings': {}
 }
 
 
@@ -85,14 +87,46 @@ class ThunderstormOutlookLoader(BaseLoader):
 
         BaseLoader.__init__(self)
 
-        self.filepath = None
         self.datetime = None
+        self.es_index = None
+        self.file_id = None
+        self.filename = None
+        self.filepath = None
+        self.product_sub_type = None
+        self.product_type = None
+
         self.conn = ElasticsearchConnector(conn_config)
 
         SETTINGS['mappings'] = MAPPINGS
-        if not self.conn.exists(INDEX_NAME):
-            LOGGER.debug(f'Creating index {INDEX_NAME}')
-            self.conn.create(INDEX_NAME, SETTINGS)
+        if not self.conn.exists(INDEX_BASENAME):
+            index_setting = {
+                'mappings': SETTINGS['mappings'],
+                'settings': SETTINGS['settings']
+                }
+            LOGGER.debug(f'Creating index {INDEX_BASENAME}')
+            self.conn.create(INDEX_BASENAME, index_setting)
+
+    def parse_filename(self, filename):
+        """
+        Parses an thunderstorm filename
+
+        :return: `bool` of parse status
+        """
+
+        LOGGER.debug(f'{filename=}')
+        self.file_id = re.sub(r'_v\d+\.json', '', filename)
+        path_pattern = '{yyyyddmmThhmmZ}_MSC_ThunderstormOutlook_{product_type}_{product_sub_type}_PT{hours}H{minutes}M' # noqa
+        filename_parse = parse.parse(path_pattern, self.file_id).named
+
+        self.product_type = filename_parse['product_type'].lower()
+        self.product_sub_type = filename_parse['product_sub_type'].lower()
+
+        self.date_ = datetime.strptime(
+            filename_parse['yyyyddmmThhmmZ'], '%Y%m%dT%H%MZ'
+        )
+        self.index_date = datetime.strftime(self.date_, '%Y-%m-%dt%H%Mz')
+
+        return True
 
     def generate_geojson_features(self):
         """
@@ -108,8 +142,6 @@ class ThunderstormOutlookLoader(BaseLoader):
             data = json.load(f)['features']
 
         features = []
-        filename = f.name.split('/')[-1]
-        file_id = re.sub(r'_v\d+\.json', '', filename)
 
         if len(data) > 0:
             for feature in data:
@@ -122,7 +154,7 @@ class ThunderstormOutlookLoader(BaseLoader):
                                                              values,
                                                              'metobject')
                         feature['properties'].update(metobj_flat_item)
-                        feature['properties']['file_id'] = file_id
+                        feature['properties']['file_id'] = self.file_id
                     except Exception as err:
                         msg = f'Error while flattening Thunderstorm JSON {err}'
                         LOGGER.error(f'{msg}')
@@ -138,13 +170,13 @@ class ThunderstormOutlookLoader(BaseLoader):
 
             # check if id is already in ES and if amendment is +=1
             amendment = features[0]['properties']['amendment']
-            is_newer = self.check_if_newer(file_id, amendment)
+            is_amend = self.check_if_amend(self.file_id, amendment)
 
-            if is_newer['update']:
+            if is_amend['update']:
                 for outlook in features:
                     action = {
                         '_id': outlook['properties']['id'],
-                        '_index': INDEX_NAME,
+                        '_index': self.es_index,
                         '_op_type': 'update',
                         'doc': outlook,
                         'doc_as_upsert': True
@@ -152,24 +184,24 @@ class ThunderstormOutlookLoader(BaseLoader):
 
                     yield action
 
-                for id_ in is_newer['id_list']:
-                    self.conn.Elasticsearch.delete(index=INDEX_NAME,
+                for id_ in is_amend['id_list']:
+                    self.conn.Elasticsearch.delete(index=self.es_index,
                                                    id=id_)
         else:
-            LOGGER.warning(f'empty thunderstorm outlook json in {filename}')
+            LOGGER.warning(f'empty thunderstorm outlook json in {self.filename}')
 
-            version = re.search(r'v(\d+)\.json$', filename).group(1)
+            version = re.search(r'v(\d+)\.json$', self.filename).group(1)
             if int(version) > 1:
                 # we need to delete the associated outlooks
                 query = {
                     "query": {
                         "match": {
-                            "properties.file_id": file_id
+                            "properties.file_id": self.file_id
                         }
                     }
                 }
-                self.conn.Elasticsearch.delete_by_query(index=INDEX_NAME,
-                                                        body=query)
+                self.conn.Elasticsearch.delete_by_query(index=self.es_index,
+                                                        body=query)       
 
     def flatten_json(self, key, values, parent_key=''):
         """
@@ -189,7 +221,7 @@ class ThunderstormOutlookLoader(BaseLoader):
             items[new_key] = value
         return items
 
-    def check_if_newer(self, file_id, amendment):
+    def check_if_amend(self, file_id, amendment):
         """
         check if the thunderstorm outlook is the newest version
 
@@ -209,7 +241,7 @@ class ThunderstormOutlookLoader(BaseLoader):
 
         # Fetch the document
         try:
-            result = self.conn.Elasticsearch.search(index=INDEX_NAME,
+            result = self.conn.Elasticsearch.search(index=self.es_index,
                                                     body=query)
             if result:
                 hit = result['hits']['hits'][0]
@@ -238,21 +270,12 @@ class ThunderstormOutlookLoader(BaseLoader):
         """
 
         self.conn.Elasticsearch.indices.refresh(
-            index=INDEX_NAME,
+            index=self.es_index,
             ignore_unavailable=True
         )
 
-        # indexes_to_fetch = []
-        # if dataset == 'all':
-        #     for alert_type in ['alpha', 'dev', 'stage']:
-        #         idx_name = '{}*'.format(INDEX_BASENAME.format(alert_type))
-        #         indexes_to_fetch.append(idx_name)
-        # else:
-        #     indexes_to_fetch = '{}*'.format(INDEX_BASENAME.format(dataset))
-
-        # indexes = conn.get(indexes_to_fetch)
-
-        # click.echo(f'indexes: {indexes}')
+        indexes_to_fetch = []
+        idx_name = '{}*'.format(INDEX_BASENAME)
 
         query = {
             'query': {'match_all': {}}
@@ -262,20 +285,20 @@ class ThunderstormOutlookLoader(BaseLoader):
 
         try:
             count_result = self.conn.Elasticsearch.count(
-                index=INDEX_NAME,
+                index=idx_name,
                 body=query,
                 ignore_unavailable=True
             )
             total = count_result['count']
 
-            LOGGER.info(f'{total} items found for {INDEX_NAME}')
+            LOGGER.info(f'{total} items found for {idx_name}')
 
             page_size = 10000
             offset = 0
 
             while offset < total:
                 result = self.conn.Elasticsearch.search(
-                    index=INDEX_NAME,
+                    index=INDEX_BASENAME,
                     body=query,
                     size=page_size,
                     from_=offset,
@@ -295,10 +318,9 @@ class ThunderstormOutlookLoader(BaseLoader):
             'features': features
         }
 
-        json_filename = 'active-thunderstorm-outlooks.json'
         output_path = os.path.join(GEOMET_LOCAL_BASEPATH,
                                     'thunderstorm-outlooks',
-                                    json_filename)
+                                    JSON_FILENAME)
 
         output_dir = os.path.dirname(output_path)
 
@@ -320,22 +342,49 @@ class ThunderstormOutlookLoader(BaseLoader):
         """
 
         self.filepath = Path(filepath)
-
         LOGGER.debug(f'Received file {self.filepath}')
 
-        # generate geojson features
-        package = self.generate_geojson_features()
-        try:
-            r = self.conn.submit_elastic_package(package)
-            LOGGER.debug(f'Result: {r}')
+        self.filename = self.filepath.name
+        self.parse_filename(self.filename)
 
-            LOGGER.debug(f'Creating local copy for GeoMet-Weather')
-            self.generate_local_copy()
+        sub_index = f'{self.product_type}-{self.product_sub_type}'
+        index_name = f"{INDEX_BASENAME}{sub_index}"
+        self.es_index = f'{index_name}.{self.index_date}'
 
-            return True
-        except Exception as err:
-            LOGGER.warning(f'Error indexing: {err}')
-            return False
+        # using "or []" to avoid having current_indices = None
+        current_indices = (self.conn.get(f"{index_name}*")) or []
+        LOGGER.debug(f'Current indices {current_indices}')
+
+        is_more_recent = all(
+            self.date_ >= datetime.strptime('.'.join(idx.split('.')[1:]),
+                                            '%Y-%m-%dt%H%Mz')
+            for idx in current_indices
+            )
+        LOGGER.debug(f'Is new file more recent --> {is_more_recent}')
+
+        if is_more_recent:
+
+            # create index
+            self.conn.create(self.es_index, {'mappings': MAPPINGS})
+
+            # generate geojson features
+            package = self.generate_geojson_features()
+            try:
+                r = self.conn.submit_elastic_package(package)
+                LOGGER.debug(f'Result: {r}')
+
+                # Delete old indices
+                LOGGER.debug(f'Deleting previous indexes: {current_indices}')
+                for idx in current_indices:
+                    self.conn.delete(idx)
+
+                # LOGGER.debug(f'Creating local copy for GeoMet-Weather')
+                # self.generate_local_copy()
+
+                return True
+            except Exception as err:
+                LOGGER.warning(f'Error indexing: {err}')
+                return False
 
 
 @click.group()
@@ -406,11 +455,11 @@ def clean_outlooks(ctx, es, username, password, ignore_certs):
         }
     }
 
-    conn.Elasticsearch.delete_by_query(index=INDEX_NAME, body=query)
+    conn.Elasticsearch.delete_by_query(index=INDEX_BASENAME, body=query)
 
-    click.echo('Creating a local copy of thunderstorm outlooks')
-    loader = ThunderstormOutlookLoader(conn_config)
-    loader.generate_local_copy()
+    # click.echo('Creating a local copy of thunderstorm outlooks')
+    # loader = ThunderstormOutlookLoader(conn_config)
+    # loader.generate_local_copy()
 
 
 @click.command()
@@ -429,12 +478,12 @@ def delete_index(ctx, es, username, password, ignore_certs, index_template):
     conn_config = configure_es_connection(es, username, password, ignore_certs)
     conn = ElasticsearchConnector(conn_config)
 
-    click.echo(f'Deleting indexes {INDEX_NAME}')
-    conn.delete(INDEX_NAME)
+    click.echo(f'Deleting indexes {INDEX_BASENAME}')
+    conn.delete(INDEX_BASENAME)
 
     if index_template:
-        click.echo(f'Deleting index template {INDEX_NAME}')
-        conn.delete_template(INDEX_NAME)
+        click.echo(f'Deleting index template {INDEX_BASENAME}')
+        conn.delete_template(INDEX_BASENAME)
 
     click.echo('Done')
 
