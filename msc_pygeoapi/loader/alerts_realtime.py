@@ -335,7 +335,7 @@ class AlertsRealtimeLoader(BaseLoader):
             # to avoid the 500 hit limit per minute
             alerts_local_path = os.path.join(GEOMET_LOCAL_BASEPATH,
                                              'alerts',
-                                             'dms-alerts.json')
+                                             'lp-dms-alerts.json')
             LOGGER.debug(f'new local file: {alerts_local_path}')
             with open(alerts_local_path, 'w', encoding='utf-8') as alerts:
                 alerts.write(json.dumps(data))

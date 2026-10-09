@@ -1,0 +1,74 @@
+{
+  "$schema": "https://proj.org/schemas/v0.7/projjson.schema.json",
+  "type": "DerivedGeographicCRS",
+  "name": "Coordinate System imported from GRIB file",
+  "base_crs": {
+    "type": "GeographicCRS",
+    "name": "Coordinate System imported from GRIB file",
+    "datum": {
+      "type": "GeodeticReferenceFrame",
+      "name": "unnamed",
+      "ellipsoid": {
+        "name": "Sphere",
+        "radius": 6371229
+      }
+    },
+    "coordinate_system": {
+      "subtype": "ellipsoidal",
+      "axis": [
+        {
+          "name": "Latitude",
+          "abbreviation": "lat",
+          "direction": "north",
+          "unit": "degree"
+        },
+        {
+          "name": "Longitude",
+          "abbreviation": "lon",
+          "direction": "east",
+          "unit": "degree"
+        }
+      ]
+    }
+  },
+  "conversion": {
+    "name": "Pole rotation (GRIB convention)",
+    "method": {
+      "name": "Pole rotation (GRIB convention)"
+    },
+    "parameters": [
+      {
+        "name": "Latitude of the southern pole (GRIB convention)",
+        "value": -31.758312,
+        "unit": "degree"
+      },
+      {
+        "name": "Longitude of the southern pole (GRIB convention)",
+        "value": -92.402969,
+        "unit": "degree"
+      },
+      {
+        "name": "Axis rotation (GRIB convention)",
+        "value": 0,
+        "unit": "degree"
+      }
+    ]
+  },
+  "coordinate_system": {
+    "subtype": "ellipsoidal",
+    "axis": [
+      {
+        "name": "Latitude",
+        "abbreviation": "lat",
+        "direction": "north",
+        "unit": "degree"
+      },
+      {
+        "name": "Longitude",
+        "abbreviation": "lon",
+        "direction": "east",
+        "unit": "degree"
+      }
+    ]
+  }
+}
