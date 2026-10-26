@@ -39,15 +39,16 @@ import pathlib
 import re
 
 import rasterio
-from rasterio.crs import CRS
 from rasterio.io import MemoryFile
 import rasterio.mask
 
+from msc_pygeoapi.provider.rdpa_bbox import bbox_to_native_polygon
 from msc_pygeoapi.util import remove_z_from_bbox
 
 from pygeoapi.provider.base import (BaseProvider,
                                     ProviderConnectionError,
-                                    ProviderQueryError)
+                                    ProviderQueryError,
+                                    ProviderNoDataError)
 from pygeoapi.provider.rasterio_ import RasterioProvider
 
 LOGGER = logging.getLogger(__name__)
@@ -132,48 +133,7 @@ class RDPAProvider(RasterioProvider):
 
         if len(bbox) > 0:
             bbox = remove_z_from_bbox(bbox)
-            minx, miny, maxx, maxy = bbox
-
-            crs_src = CRS.from_epsg(4326)
-            crs_dest = CRS.from_string(self.crs)
-
-            LOGGER.debug('source bbox CRS and data CRS are different')
-            LOGGER.debug('reprojecting bbox into native coordinates')
-
-            temp_geom_min = {"type": "Point", "coordinates": [minx, miny]}
-            temp_geom_max = {"type": "Point", "coordinates": [maxx, maxy]}
-            temp_geom_minup = {"type": "Point", "coordinates": [minx, maxy]}
-            temp_geom_maxdown = {"type": "Point", "coordinates": [maxx, miny]}
-
-            min_coord = rasterio.warp.transform_geom(crs_src, crs_dest,
-                                                     temp_geom_min)
-            minx2, miny2 = min_coord['coordinates']
-
-            max_coord = rasterio.warp.transform_geom(crs_src, crs_dest,
-                                                     temp_geom_max)
-            maxx2, maxy2 = max_coord['coordinates']
-
-            upleft_coord = rasterio.warp.transform_geom(crs_src, crs_dest,
-                                                        temp_geom_minup)
-            minx2up, maxy2up = upleft_coord['coordinates']
-
-            downright_coord = rasterio.warp.transform_geom(crs_src, crs_dest,
-                                                           temp_geom_maxdown)
-            maxx2down, miny2down = downright_coord['coordinates']
-
-            LOGGER.debug(f'Source coordinates: {minx}, {miny}, {maxx}, {maxy}')
-            LOGGER.debug(f'Destination coordinates: {minx2}, {miny2}, {maxx2}, {maxy2}')  # noqa
-
-            shapes = [{
-                'type': 'Polygon',
-                'coordinates': [[
-                    [minx2, miny2],
-                    [minx2up, maxy2up],
-                    [maxx2, maxy2],
-                    [maxx2down, miny2down],
-                    [minx2, miny2],
-                ]]
-            }]
+            # GeoJSON shapes are built after opening the selected native grid.
 
         elif (self._coverage_properties['x_axis_label'] in subsets and
                 self._coverage_properties['y_axis_label'] in subsets):
@@ -239,6 +199,16 @@ class RDPAProvider(RasterioProvider):
             LOGGER.debug('Creating output coverage metadata')
             _data._crs = self.crs
             _data._transform = self.transform
+
+            if bbox:
+                try:
+                    shape = bbox_to_native_polygon(
+                        bbox, self.crs, tuple(_data.bounds))
+                except ValueError as err:
+                    raise ProviderQueryError(str(err)) from err
+                if shape is None:
+                    raise ProviderNoDataError('bbox does not overlap RDPA grid')
+                shapes = [shape]
 
             out_meta = _data.meta
 
