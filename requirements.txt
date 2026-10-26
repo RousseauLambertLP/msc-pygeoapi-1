@@ -14,5 +14,6 @@ python-slugify
 pyyaml
 rasterio<1.4
 requests
+shapely
 sqlalchemy
 xarray<2025.0.0
